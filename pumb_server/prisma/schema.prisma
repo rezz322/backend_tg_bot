@@ -1,0 +1,27 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id             Int           @id @default(autoincrement())
+  number         String        @unique
+  key            String?       @unique
+  telegramUserId Int?
+  telegramUser   TelegramUser? @relation(fields: [telegramUserId], references: [id])
+}
+
+model TelegramUser {
+  id         Int       @id @default(autoincrement())
+  telegramId BigInt    @unique
+  username   String?
+  isBanned   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  accounts   Account[]
+}
