@@ -8,7 +8,7 @@ export class AccountsController {
 
     @Post()
     async create(@Body() data: Prisma.AccountCreateInput) {
-        return this.accountsService.create(data);
+        this.accountsService.create(data);
     }
 
     @Get()
@@ -23,7 +23,7 @@ export class AccountsController {
 
     @Get(':id')
     async findOne(@Param('id') id: string) {
-        const account = await this.accountsService.findOne(+id);
+        const account = await this.accountsService.findOne(id);
         if (!account) throw new NotFoundException('Account not found');
         return account;
     }
@@ -43,9 +43,9 @@ export class AccountsController {
         return this.accountsService.getAccountByKey(key);
     }
 
-    @Get('check-ban/:number')
-    async isAccountBanned(@Param('number') number: string) {
-        return { isBanned: await this.accountsService.isAccountBanned(number) };
+    @Get('check-ban/:phone')
+    async isAccountBanned(@Param('phone') phone: string) {
+        return { isBanned: await this.accountsService.isAccountBanned(phone) };
     }
 
     @Get('key-check-ban/:key')
@@ -53,18 +53,23 @@ export class AccountsController {
         return { isBanned: await this.accountsService.isAccountBannedByKey(key) };
     }
 
-    @Post('admin/info/:number')
-    async getAccountInfo(@Param('number') number: string, @Body() body: { adminId: string }) {
-        return this.accountsService.getAccountInfo(number, body.adminId);
+    @Post('admin/info/:phone')
+    async getAccountInfo(@Param('phone') phone: string, @Body() body: { adminId: string }) {
+        return this.accountsService.getAccountInfo(phone, body.adminId);
     }
 
-    @Post('admin/refresh/:number')
-    async refreshAccountKey(@Param('number') number: string, @Body() body: { adminId: string }) {
-        return this.accountsService.refreshAccountKey(number, body.adminId);
+    @Post('admin/refresh/:phone')
+    async refreshAccountKey(@Param('phone') phone: string, @Body() body: { adminId: string }) {
+        return this.accountsService.refreshAccountKey(phone, body.adminId);
     }
 
     @Post('admin/give-key')
-    async giveKey(@Body() body: { telegramId: string; number: string; adminId: string }) {
-        return this.accountsService.giveAccountKey(body.telegramId, body.number, body.adminId);
+    async giveKey(@Body() body: { telegramId: string; phone: string; adminId: string }) {
+        return this.accountsService.giveAccountKey(body.telegramId, body.phone, body.adminId);
+    }
+
+    @Post('admin/take-away/:id')
+    async takeAwayAccount(@Param('id') id: string, @Body() body: { adminId: string }) {
+        return this.accountsService.takeAwayAccount(+id, body.adminId);
     }
 }

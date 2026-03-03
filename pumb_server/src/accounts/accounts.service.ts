@@ -4,6 +4,7 @@ import { Account, Prisma } from '@prisma/client';
 import { BotService } from '../bot/bot.service';
 import { customAlphabet } from 'nanoid';
 
+
 @Injectable()
 export class AccountsService {
     constructor(
@@ -14,7 +15,7 @@ export class AccountsService {
     async create(data: Prisma.AccountCreateInput): Promise<Account> {
         data.key = this.generateKey(6);
         return this.prisma.account.upsert({
-            where: { number: data.number },
+            where: { phone: data.phone },
             update: data,
             create: data,
         });
@@ -24,9 +25,25 @@ export class AccountsService {
         return this.prisma.account.findMany();
     }
 
-    async findOne(id: number): Promise<Account | null> {
+    async findOne(key: string) {
         return this.prisma.account.findUnique({
-            where: { id },
+            where: { key },
+            select: {
+                brand: true,
+                manufacturer: true,
+                model: true,
+                board: true,
+                hardware: true,
+                product: true,
+                device: true,
+                fingerprint: true,
+                release: true,
+                sdk: true,
+                security_patch: true,
+                android_id: true,
+                phone: true,
+                correlation_id: true,
+            },
         });
     }
 
@@ -43,11 +60,11 @@ export class AccountsService {
         });
     }
 
-    async getAccountInfo(number: string, adminId: string) {
+    async getAccountInfo(phone: string, adminId: string) {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
 
         const account = await this.prisma.account.findUnique({
-            where: { number },
+            where: { phone },
         });
 
         if (!account) throw new NotFoundException('Account not found');
@@ -68,9 +85,9 @@ export class AccountsService {
         return account;
     }
 
-    async isAccountBanned(number: string): Promise<boolean> {
+    async isAccountBanned(phone: string): Promise<boolean> {
         const account = await this.prisma.account.findUnique({
-            where: { number },
+            where: { phone },
             include: { telegramUser: true },
         });
         if (!account || !account.telegramUser) return false;
@@ -93,7 +110,7 @@ export class AccountsService {
         return nanoid();
     }
 
-    async giveAccountKey(telegramId: string, number: string, adminId: string) {
+    async giveAccountKey(telegramId: string, phone: string, adminId: string) {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
         if (!telegramId) throw new NotFoundException('telegramId is required');
 
@@ -104,7 +121,7 @@ export class AccountsService {
         if (!user) throw new NotFoundException('User not found');
 
         const account = await this.prisma.account.findUnique({
-            where: { number },
+            where: { phone },
         });
 
         if (!account) throw new NotFoundException('Account not found');
@@ -112,7 +129,7 @@ export class AccountsService {
         const newKey = this.generateKey(6);
 
         return this.prisma.account.update({
-            where: { number },
+            where: { phone },
             data: {
                 telegramUserId: user.id,
                 key: newKey,
@@ -120,14 +137,39 @@ export class AccountsService {
         });
     }
 
-    async refreshAccountKey(number: string, adminId: string) {
+    async refreshAccountKey(phone: string, adminId: string) {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
 
         const newKey = this.generateKey(6);
 
         return this.prisma.account.update({
-            where: { number },
+            where: { phone },
             data: { key: newKey },
+        });
+    }
+
+    async refreshKeysForUser(telegramUserId: number) {
+        const accounts = await this.prisma.account.findMany({
+            where: { telegramUserId },
+        });
+
+        for (const account of accounts) {
+            await this.prisma.account.update({
+                where: { id: account.id },
+                data: { key: this.generateKey(6) },
+            });
+        }
+    }
+
+    async takeAwayAccount(accountId: number, adminId: string) {
+        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
+
+        return this.prisma.account.update({
+            where: { id: accountId },
+            data: {
+                telegramUserId: null,
+                key: this.generateKey(6),
+            },
         });
     }
 

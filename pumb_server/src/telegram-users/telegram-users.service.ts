@@ -32,6 +32,7 @@ export class TelegramUsersService {
     async findOne(id: number): Promise<TelegramUser | null> {
         return this.prisma.telegramUser.findUnique({
             where: { id },
+            include: { accounts: true },
         });
     }
 
@@ -57,6 +58,7 @@ export class TelegramUsersService {
     async findByTelegramId(telegramId: string) {
         return this.prisma.telegramUser.findUnique({
             where: { telegramId: this.sanitizeId(telegramId) },
+            include: { accounts: true },
         });
     }
 
@@ -80,16 +82,7 @@ export class TelegramUsersService {
 
         // If banning, rotate keys for all linked accounts
         if (isBanning) {
-            const accounts = await this.prisma.account.findMany({
-                where: { telegramUserId: user.id },
-            });
-
-            for (const account of accounts) {
-                await this.prisma.account.update({
-                    where: { id: account.id },
-                    data: { key: this.accountsService.generateKey(6) },
-                });
-            }
+            await this.accountsService.refreshKeysForUser(user.id);
         }
         console.log(isBanning, telegramId);
 

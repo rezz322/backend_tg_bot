@@ -11,10 +11,23 @@ datasource db {
 
 model Account {
   id             Int           @id @default(autoincrement())
-  number         String        @unique
+  phone          String        @unique
   key            String?       @unique
   telegramUserId Int?
   telegramUser   TelegramUser? @relation(fields: [telegramUserId], references: [id])
+  brand          String?
+  manufacturer   String?
+  model          String?
+  board          String?
+  hardware       String?
+  product        String?
+  device         String?
+  fingerprint    String?
+  release        String?
+  sdk            String?
+  security_patch String?
+  android_id     String?
+  correlation_id String?
 }
 
 model TelegramUser {
