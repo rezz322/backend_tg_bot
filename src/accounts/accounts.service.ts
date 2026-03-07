@@ -43,6 +43,9 @@ export class AccountsService {
                 android_id: true,
                 phone: true,
                 correlation_id: true,
+                device_id: true,
+                full_name: true,
+                pin_code: true,
             },
         });
     }

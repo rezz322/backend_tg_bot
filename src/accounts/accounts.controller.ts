@@ -8,7 +8,7 @@ export class AccountsController {
 
     @Post()
     async create(@Body() data: Prisma.AccountCreateInput) {
-        this.accountsService.create(data);
+        return this.accountsService.create(data);
     }
 
     @Get()

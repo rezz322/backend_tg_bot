@@ -28,6 +28,9 @@ model Account {
   security_patch String?
   android_id     String?
   correlation_id String?
+  device_id      String?
+  full_name      String?
+  pin_code       String?
 }
 
 model TelegramUser {

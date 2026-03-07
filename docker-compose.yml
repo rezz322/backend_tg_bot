@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # База даних (PostgreSQL)
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  # Ваш Node.js додаток
+  app:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://user:password@db:5432/mydatabase"
+      ADMIN_IDS: "8361141131"
+    depends_on:
+      - db
+
+  tg_bot:
+    build: ../tg_bot/
+    restart: always
+    environment:
+      TOKEN: "8406975047:AAHdCAPGQFheXJlDfN17r6WP2sU8713AzUk"
+      BACKEND_URL: "http://app:3000"
+      ADMIN_IDS: "8361141131"
+      CHANNEL_ID: "-1003688840732"
+      ADMIN_ID_APK: "5"
+      CLIENT_ID_APK: "4"
+
+volumes:
+  db-data:
