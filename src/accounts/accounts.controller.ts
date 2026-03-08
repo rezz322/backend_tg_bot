@@ -17,15 +17,15 @@ export class AccountsController {
     }
 
     @Get('user/:identifier')
-    async findByUser(@Param('identifier') identifier: string, @Query('adminId') adminId: string) {
+    async findByUser(@Param('identifier') identifier: string) {
         const isNumeric = /^\d+$/.test(identifier);
         const isLargeNumber = identifier.length > 9 || (identifier.length === 9 && identifier > '2147483647');
 
         if (isNumeric && (isLargeNumber || identifier.length > 5)) {
-            return this.accountsService.findByTelegramId(identifier, adminId);
+            return this.accountsService.findByTelegramId(identifier);
         }
 
-        return this.accountsService.findByUsername(identifier, adminId);
+        return this.accountsService.findByUsername(identifier);
     }
 
     @Get('get-available-accounts')
@@ -78,10 +78,10 @@ export class AccountsController {
     }
 
     @Post('auto-issue')
-    async autoIssueKey(@Body() body: { userId?: number; telegramId?: string; fullName: string; phone: string; pin: string }) {
+    async autoIssueKey(@Body() body: { userId?: number; telegramId?: string; phone: string; pin: string }) {
         const id = body.telegramId || body.userId;
         if (!id) throw new NotFoundException('User identification (userId or telegramId) is required');
-        return this.accountsService.autoIssueKey(id, body.fullName, body.phone, body.pin);
+        return this.accountsService.autoIssueKey(id, body.phone, body.pin);
     }
 
     @Post('admin/take-away/:id')

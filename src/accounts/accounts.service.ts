@@ -53,8 +53,7 @@ export class AccountsService {
         });
     }
 
-    async findByUsername(username: string, adminId: string): Promise<any[]> {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
+    async findByUsername(username: string): Promise<any[]> {
         return this.prisma.account.findMany({
             where: {
                 telegramUsers: {
@@ -72,8 +71,7 @@ export class AccountsService {
         });
     }
 
-    async findByTelegramId(telegramId: string, adminId: string): Promise<any[]> {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
+    async findByTelegramId(telegramId: string): Promise<any[]> {
         const tid = sanitizeId(telegramId);
         return this.prisma.account.findMany({
             where: {
@@ -245,9 +243,7 @@ export class AccountsService {
         return this.giveAccountKey(user.id, phone, adminId, days);
     }
 
-    async autoIssueKey(idOrTelegramId: string | number, fullName: string, phone: string, pin: string) {
-        const sanitizedPhone = phone.trim().replace(/[^\d]/g, ''); // Remove all non-digits for comparison
-        const sanitizedFullName = fullName.trim();
+    async autoIssueKey(idOrTelegramId: string | number, phone: string, pin: string) {
         const sanitizedPin = pin.trim();
 
         const sanitizedId = sanitizeId(idOrTelegramId);
@@ -257,37 +253,17 @@ export class AccountsService {
 
         if (!user) throw new NotFoundException('User not found in Telegram database');
 
-        console.log(`Auto-issue attempt: user=${user.id} (tg=${sanitizedId}), name=${sanitizedFullName}, phone=${sanitizedPhone}, pin=${sanitizedPin}`);
-
+        console.log(`Auto-issue attempt: user=${user.id} (tg=${sanitizedId}), phone=${phone}, pin=${sanitizedPin}`);
+        console.log(phone);
         // find matching account
-        const accounts = await this.prisma.account.findMany({
+        const account = await this.prisma.account.findUnique({
             where: {
-                full_name: {
-                    equals: sanitizedFullName,
-                    mode: 'insensitive'
-                },
-                pin_code: sanitizedPin,
-                // telegramUserId check replaced by logic for "available" or just many-to-many
-                // For "multi-user" we might allow it even if others are connected, 
-                // but let's assume "available" means "not banned and can be connected"
-                isBanned: false
+                phone: phone,
             }
         });
-
-        console.log(`Found ${accounts.length} potential accounts matching name and pin`);
-        if (accounts.length > 0) {
-            accounts.forEach(acc => {
-                console.log(`Potential Account: id=${acc.id}, phone=${acc.phone}, sanitizedPhone=${acc.phone.replace(/[^\d]/g, '')}`);
-            });
-        }
-
-        // Filter by sanitized phone number
-        const account = accounts.find(acc => {
-            const accPhoneSanitized = acc.phone.replace(/[^\d]/g, '');
-            return accPhoneSanitized === sanitizedPhone;
-        });
-
+        console.log(account);
         if (!account) throw new NotFoundException('No matching available account found for these details');
+        if (account.pin_code != sanitizedPin) throw new ForbiddenException('No matching available account found for these details');
 
         return this.prisma.account.update({
             where: { id: account.id },
