@@ -4,10 +4,10 @@ import { customAlphabet } from 'nanoid';
 /**
  * Sanitizes Telegram ID by removing non-numeric characters and converting to bigint.
  */
-export function sanitizeId(id: any): bigint {
+export function sanitizeId(id: any): string {
     const sanitized = String(id).trim().replace(/[^\d-]/g, '');
     if (!sanitized) throw new NotFoundException('Invalid telegramId format');
-    return BigInt(sanitized);
+    return sanitized;
 }
 
 /**

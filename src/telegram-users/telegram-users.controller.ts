@@ -26,19 +26,8 @@ export class TelegramUsersController {
 
     @Get(':id')
     async findOne(@Param('id') id: string, @Query('adminId') adminId: string) {
-        if (!this.telegramUsersService.isAdmin(adminId)) throw new ForbiddenException('Access denied');
-        // If it's a large number, it's probably a telegramId
-        const isLargeNumber = id.length > 9 || (id.length === 9 && id > '2147483647');
-
-        if (isLargeNumber) {
-            const user = await this.telegramUsersService.findByTelegramId(id);
-            if (!user) throw new NotFoundException('User not found');
-            return user;
-        }
-
-        const user = await this.telegramUsersService.findOne(+id);
+        const user = await this.telegramUsersService.findOne(id);
         if (!user) {
-            // Fallback: maybe it's still a telegramId but shorter
             const userByTg = await this.telegramUsersService.findByTelegramId(id);
             if (!userByTg) throw new NotFoundException('User not found');
             return userByTg;
@@ -48,7 +37,7 @@ export class TelegramUsersController {
 
     @Patch(':id')
     async update(@Param('id') id: string, @Body() data: Prisma.TelegramUserUpdateInput) {
-        return this.telegramUsersService.update(+id, data);
+        return this.telegramUsersService.update(id, data);
     }
 
 

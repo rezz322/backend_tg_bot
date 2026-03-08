@@ -36,7 +36,7 @@ model Account {
 
 model TelegramUser {
   id            Int       @id @default(autoincrement())
-  telegramId    BigInt    @unique
+  telegramId    String    @unique
   username      String?
   isBanned      Boolean   @default(false)
   isWhitelisted Boolean   @default(false)

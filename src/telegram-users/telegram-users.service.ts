@@ -56,23 +56,23 @@ export class TelegramUsersService {
         return this.prisma.telegramUser.findMany();
     }
 
-    async findOne(id: number): Promise<TelegramUser | null> {
+    async findOne(id: string): Promise<TelegramUser | null> {
         return this.prisma.telegramUser.findUnique({
-            where: { id },
+            where: { telegramId: id },
             include: { accounts: true },
         });
     }
 
-    async update(id: number, data: Prisma.TelegramUserUpdateInput): Promise<TelegramUser> {
+    async update(id: string, data: Prisma.TelegramUserUpdateInput): Promise<TelegramUser> {
         return this.prisma.telegramUser.update({
-            where: { id },
+            where: { telegramId: id },
             data,
         });
     }
 
-    async remove(id: number): Promise<TelegramUser> {
+    async remove(id: string): Promise<TelegramUser> {
         return this.prisma.telegramUser.delete({
-            where: { id },
+            where: { telegramId: id },
         });
     }
 
