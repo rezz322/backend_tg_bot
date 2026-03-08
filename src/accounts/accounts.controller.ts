@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import { Prisma } from '@prisma/client';
 
@@ -12,21 +12,26 @@ export class AccountsController {
     }
 
     @Get()
-    async findAll(@Query('adminId') adminId?: string) {
-        if (adminId) {
-            return this.accountsService.findAllAdmin(adminId);
-        }
-        return this.accountsService.findAll();
+    async findAll(@Query('adminId') adminId: string) {
+        return this.accountsService.findAllAdmin(adminId);
     }
 
-    @Get('user/:username')
-    async findByUsername(@Param('username') username: string) {
-        return this.accountsService.findByUsername(username);
+    @Get('user/:identifier')
+    async findByUser(@Param('identifier') identifier: string, @Query('adminId') adminId: string) {
+        const isNumeric = /^\d+$/.test(identifier);
+        const isLargeNumber = identifier.length > 9 || (identifier.length === 9 && identifier > '2147483647');
+
+        if (isNumeric && (isLargeNumber || identifier.length > 5)) {
+            return this.accountsService.findByTelegramId(identifier, adminId);
+        }
+
+        return this.accountsService.findByUsername(identifier, adminId);
     }
 
     @Get('get-available-accounts')
-    async getAvailableAccounts() {
-        return this.accountsService.getAvailableAccounts();
+    async getAvailableAccounts(@Query('adminId') adminId: string) {
+        // Only admin should see available accounts
+        return this.accountsService.getAvailableAccounts(adminId);
     }
 
     @Get(':id')

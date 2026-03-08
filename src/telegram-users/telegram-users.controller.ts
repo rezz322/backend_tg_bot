@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
 import { TelegramUsersService } from './telegram-users.service';
 import { Prisma, TelegramUser } from '@prisma/client';
 
@@ -23,12 +23,14 @@ export class TelegramUsersController {
     }
 
     @Get()
-    async findAll() {
+    async findAll(@Query('adminId') adminId: string) {
+        if (!this.telegramUsersService.isAdmin(adminId)) throw new ForbiddenException('Access denied');
         return this.telegramUsersService.findAll();
     }
 
     @Get(':id')
-    async findOne(@Param('id') id: string) {
+    async findOne(@Param('id') id: string, @Query('adminId') adminId: string) {
+        if (!this.telegramUsersService.isAdmin(adminId)) throw new ForbiddenException('Access denied');
         // If it's a large number, it's probably a telegramId
         const isLargeNumber = id.length > 9 || (id.length === 9 && id > '2147483647');
 

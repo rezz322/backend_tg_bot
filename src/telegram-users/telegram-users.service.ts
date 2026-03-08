@@ -12,6 +12,10 @@ export class TelegramUsersService {
         private accountsService: AccountsService
     ) { }
 
+    isAdmin(id: string): boolean {
+        return this.botService.checkAdmin(id);
+    }
+
     async create(data: { id: string; username?: string }): Promise<TelegramUser> {
         if (!data.id) throw new NotFoundException('id is required');
         const telegramId = this.sanitizeId(data.id);

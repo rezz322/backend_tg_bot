@@ -30,18 +30,6 @@ export class AccountsService {
         });
     }
 
-    async findAll(): Promise<any[]> {
-        return this.prisma.account.findMany({
-            select: {
-                id: true,
-                phone: true,
-                key: true,
-                brand: true,
-                model: true,
-                full_name: true, // Only returning essential for non-admin if needed, but usually this is internal
-            }
-        });
-    }
 
     async findAllAdmin(adminId: string): Promise<any[]> {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
@@ -65,7 +53,8 @@ export class AccountsService {
         });
     }
 
-    async findByUsername(username: string): Promise<any[]> {
+    async findByUsername(username: string, adminId: string): Promise<any[]> {
+        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
         return this.prisma.account.findMany({
             where: {
                 telegramUsers: {
@@ -83,7 +72,25 @@ export class AccountsService {
         });
     }
 
-    async getAvailableAccounts() {
+    async findByTelegramId(telegramId: string, adminId: string): Promise<any[]> {
+        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
+        const tid = this.sanitizeId(telegramId);
+        return this.prisma.account.findMany({
+            where: {
+                telegramUsers: {
+                    some: {
+                        telegramId: tid
+                    }
+                }
+            },
+            include: {
+                telegramUsers: true
+            }
+        });
+    }
+
+    async getAvailableAccounts(adminId: string) {
+        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
         return this.prisma.account.findMany({
             where: {
                 telegramUsers: {
