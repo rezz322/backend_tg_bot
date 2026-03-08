@@ -13,7 +13,7 @@ export function sanitizeId(id: any): string {
 /**
  * Generates a random key of specified length.
  */
-export function generateKey(length: number = 12): string {
+export function generateKey(length: number = 6): string {
     const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', length);
     return nanoid();
 }

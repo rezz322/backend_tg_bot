@@ -1,30 +1,40 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query } from '@nestjs/common';
 import { TelegramUsersService } from './telegram-users.service';
 import { Prisma, TelegramUser } from '@prisma/client';
+import { Admin } from '../common/decorators/admin.decorator';
+import { UserAccess } from '../common/decorators/access.decorator';
 
 @Controller('users')
 export class TelegramUsersController {
     constructor(private readonly telegramUsersService: TelegramUsersService) { }
 
-    @Post()
-    async create(@Body() data: { id: string; username?: string }): Promise<TelegramUser> {
-        if (!data.id) throw new NotFoundException('id is required');
-        return this.telegramUsersService.checkWhitelistAndAdd(data);
+    @UserAccess()
+    @Get('check-access/:id')
+    async checkAccess(@Param('id') id: string, @Query('username') username?: string) {
+        return this.telegramUsersService.checkAccess(id, username);
     }
 
+    @UserAccess()
+    @Get('check-admin/:id')
+    async checkAdmin(@Param('id') id: string) {
+        return { isAdmin: this.telegramUsersService.isAdmin(id) };
+    }
+
+    @Admin()
     @Post('admin/whitelist/username')
-    async toggleWhitelistByUsername(@Body() body: { username: string; adminId: string }) {
-        return this.telegramUsersService.toggleWhitelistByUsername(body.username, body.adminId);
+    async toggleWhitelistByUsername(@Body() body: { username: string }) {
+        return this.telegramUsersService.toggleWhitelistByUsername(body.username);
     }
 
+    @Admin()
     @Get()
-    async findAll(@Query('adminId') adminId: string) {
-        if (!this.telegramUsersService.isAdmin(adminId)) throw new ForbiddenException('Access denied');
+    async findAll() {
         return this.telegramUsersService.findAll();
     }
 
+    @Admin()
     @Get(':id')
-    async findOne(@Param('id') id: string, @Query('adminId') adminId: string) {
+    async findOne(@Param('id') id: string) {
         const user = await this.telegramUsersService.findOne(id);
         if (!user) {
             const userByTg = await this.telegramUsersService.findByTelegramId(id);
@@ -34,21 +44,24 @@ export class TelegramUsersController {
         return user;
     }
 
+    @UserAccess()
     @Patch(':id')
     async update(@Param('id') id: string, @Body() data: Prisma.TelegramUserUpdateInput) {
         return this.telegramUsersService.update(id, data);
     }
 
 
+    @Admin()
     @Post('admin/info/username')
-    async getTelegramUserByUsername(@Body() body: { username: string; adminId: string }) {
-        const user = await this.telegramUsersService.getTelegramUserInfoByUsername(body.username, body.adminId);
+    async getTelegramUserByUsername(@Body() body: { username: string }) {
+        const user = await this.telegramUsersService.getTelegramUserInfoByUsername(body.username);
         if (!user) throw new NotFoundException('User not found');
         return user;
     }
 
+    @Admin()
     @Post('admin/ban/:id')
-    async toggleBan(@Param('id') id: string, @Body() body: { adminId: string }) {
-        return this.telegramUsersService.toggleBan(id, body.adminId);
+    async toggleBan(@Param('id') id: string) {
+        return this.telegramUsersService.toggleBan(id);
     }
 }

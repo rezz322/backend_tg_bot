@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramUser, Prisma } from '@prisma/client';
 import { BotService } from '../bot/bot.service';
@@ -10,6 +10,7 @@ export class TelegramUsersService {
     constructor(
         private prisma: PrismaService,
         private botService: BotService,
+        @Inject(forwardRef(() => AccountsService))
         private accountsService: AccountsService
     ) { }
 
@@ -17,18 +18,60 @@ export class TelegramUsersService {
         return this.botService.checkAdmin(id);
     }
 
+    async checkAccess(id: string, username?: string): Promise<{
+        allowed: boolean;
+        message: string;
+        isAdmin: boolean;
+        isWhitelisted: boolean;
+        isBanned: boolean;
+        user?: TelegramUser
+    }> {
+        const isAdmin = this.isAdmin(id);
+        const telegramId = sanitizeId(id);
+        let user = await this.prisma.telegramUser.findUnique({
+            where: { telegramId },
+        });
+
+        if (!user) {
+            // Auto-register if not found
+            user = await this.prisma.telegramUser.create({
+                data: {
+                    telegramId,
+                    username: username || null,
+                    isWhitelisted: false,
+                },
+            });
+        }
+
+        const isWhitelisted = user.isWhitelisted;
+        const isBanned = user.isBanned;
+
+        if (isAdmin) {
+            return { allowed: true, message: 'Админ-доступ разрешен', isAdmin, isWhitelisted, isBanned, user };
+        }
+
+        if (isBanned) {
+            return { allowed: false, message: 'Ваш аккаунт заблокирован.', isAdmin, isWhitelisted, isBanned, user };
+        }
+
+        if (!isWhitelisted) {
+            return { allowed: false, message: 'Вы не добавлены в белый список.', isAdmin, isWhitelisted, isBanned, user };
+        }
+
+        return { allowed: true, message: 'Доступ разрешен', isAdmin, isWhitelisted, isBanned, user };
+    }
+
     async create(data: { id: string; username?: string }): Promise<TelegramUser> {
         if (!data.id) throw new NotFoundException('id is required');
         const telegramId = sanitizeId(data.id);
 
-        // Auto-whitelist if it's the first time we see this user or just ensure they exist
         return this.prisma.telegramUser.upsert({
             where: { telegramId },
             update: { username: data.username },
             create: {
                 telegramId,
                 username: data.username,
-                isWhitelisted: false, // Default to false, can be toggled by admin
+                isWhitelisted: false,
             },
         });
     }
@@ -76,8 +119,7 @@ export class TelegramUsersService {
         });
     }
 
-    async getTelegramUserInfo(telegramId: string, adminId: string) {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
+    async getTelegramUserInfo(telegramId: string) {
         if (!telegramId) throw new NotFoundException('telegramId is required');
         return this.findByTelegramId(telegramId);
     }
@@ -89,9 +131,7 @@ export class TelegramUsersService {
         });
     }
 
-    async toggleWhitelist(telegramId: string, adminId: string) {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
-
+    async toggleWhitelist(telegramId: string) {
         const user = await this.prisma.telegramUser.findUnique({
             where: { telegramId: sanitizeId(telegramId) },
         });
@@ -104,16 +144,7 @@ export class TelegramUsersService {
         });
     }
 
-    async isWhitelisted(telegramId: string): Promise<boolean> {
-        const user = await this.prisma.telegramUser.findUnique({
-            where: { telegramId: sanitizeId(telegramId) },
-        });
-        return user?.isWhitelisted || false;
-    }
-
-    async toggleWhitelistByUsername(username: string, adminId: string) {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
-
+    async toggleWhitelistByUsername(username: string) {
         const user = await this.prisma.telegramUser.findFirst({
             where: {
                 username: {
@@ -131,8 +162,7 @@ export class TelegramUsersService {
         });
     }
 
-    async toggleBan(telegramId: string, adminId: string) {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
+    async toggleBan(telegramId: string) {
         if (!telegramId) throw new NotFoundException('telegramId is required');
 
         const user = await this.prisma.telegramUser.findUnique({
@@ -141,16 +171,13 @@ export class TelegramUsersService {
 
         if (!user) throw new NotFoundException('User not found');
 
-        const isBanning = !user.isBanned;
-
         return this.prisma.telegramUser.update({
             where: { telegramId: sanitizeId(telegramId) },
-            data: { isBanned: isBanning },
+            data: { isBanned: !user.isBanned },
         });
     }
 
-    async getTelegramUserInfoByUsername(username: string, adminId: string) {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
+    async getTelegramUserInfoByUsername(username: string) {
         return this.findByUsername(username);
     }
 
