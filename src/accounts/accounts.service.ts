@@ -150,32 +150,6 @@ export class AccountsService {
         return account;
     }
 
-    async getAccountByKey(key: string) {
-        const account = await this.prisma.account.findUnique({
-            where: { key },
-            include: { telegramUsers: true },
-        });
-
-        if (!account) throw new NotFoundException('Account with this key not found');
-
-        // Check for account ban
-        if (account.isBanned) {
-            throw new ForbiddenException('Account is banned');
-        }
-
-        // Check for owner ban (any owner)
-        const bannedOwner = account.telegramUsers.find(user => user.isBanned);
-        if (bannedOwner) {
-            throw new ForbiddenException('User is banned');
-        }
-
-        // Check for expiration
-        if (account.expiresAt && new Date() > account.expiresAt) {
-            throw new ForbiddenException('Account key has expired');
-        }
-
-        return account;
-    }
 
     async isAccountBanned(phone: string): Promise<boolean> {
         const account = await this.prisma.account.findUnique({

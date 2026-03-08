@@ -16,8 +16,8 @@ async function bootstrap() {
       credentials: true,
     };
 
-    const isPublicGet = req.method === 'GET' && /^\/accounts\/key\/[^/]+$/.test(req.url);
-    const isPublicPost = req.method === 'POST' && /^\/accounts\/?$/.test(req.url);
+    const isPublicGet = req.method === 'GET' && req.url.startsWith('/accounts/key/');
+    const isPublicPost = req.method === 'POST' && (req.url === '/accounts' || req.url === '/accounts/');
 
     if (isPublicGet || isPublicPost) {
       corsOptions.origin = true; // Allow all

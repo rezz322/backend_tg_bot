@@ -45,13 +45,7 @@ export class AccountsController {
     async update(@Param('id') id: string, @Body() data: Prisma.AccountUpdateInput) {
         return this.accountsService.update(+id, data);
     }
-
-
-    @Get('key/:key')
-    async getAccountByKey(@Param('key') key: string) {
-        return this.accountsService.getAccountByKey(key);
-    }
-
+    
     @Get('check-ban/:phone')
     async isAccountBanned(@Param('phone') phone: string) {
         return { isBanned: await this.accountsService.isAccountBanned(phone) };
