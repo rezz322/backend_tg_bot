@@ -192,4 +192,11 @@ export class TelegramUsersService {
             include: { accounts: true },
         });
     }
+
+    async updateAccountLimit(telegramId: string, limit: number) {
+        return this.prisma.telegramUser.update({
+            where: { telegramId: sanitizeId(telegramId) },
+            data: { accountLimit: limit },
+        });
+    }
 }

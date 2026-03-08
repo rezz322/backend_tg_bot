@@ -64,4 +64,10 @@ export class TelegramUsersController {
     async toggleBan(@Param('id') id: string) {
         return this.telegramUsersService.toggleBan(id);
     }
+
+    @Admin()
+    @Patch('admin/limit/:id')
+    async updateLimit(@Param('id') id: string, @Body() body: { limit: number }) {
+        return this.telegramUsersService.updateAccountLimit(id, body.limit);
+    }
 }

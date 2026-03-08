@@ -50,7 +50,7 @@ export class AccountsService {
                 brand: true,
                 model: true,
                 isBanned: true,
-                telegramUsers: {
+                user: {
                     select: {
                         username: true,
                         telegramId: true
@@ -60,20 +60,18 @@ export class AccountsService {
         });
     }
 
-    async findByUsername(telegramId: string): Promise<any[]> {
+    async findByTelegramId(telegramId: string): Promise<any[]> {
         return this.prisma.account.findMany({
             where: {
-                telegramUsers: {
-                    some: {
-                        telegramId: {
-                            equals: telegramId,
-                            mode: 'insensitive'
-                        }
+                user: {
+                    telegramId: {
+                        equals: telegramId,
+                        mode: 'insensitive'
                     }
                 }
             },
             include: {
-                telegramUsers: true
+                user: true
             }
         });
     }
@@ -82,9 +80,7 @@ export class AccountsService {
     async getAvailableAccounts() {
         return this.prisma.account.findMany({
             where: {
-                telegramUsers: {
-                    none: {}
-                }
+                userId: null
             }
         });
     }
@@ -106,7 +102,7 @@ export class AccountsService {
 
         const account = await this.prisma.account.findUnique({
             where: { phone },
-            include: { telegramUsers: true },
+            include: { user: true },
         });
 
         if (!account) throw new NotFoundException('Account not found');
@@ -116,17 +112,15 @@ export class AccountsService {
     async getAccountByKey(key: string) {
         let account = await this.prisma.account.findUnique({
             where: { key },
-            include: { telegramUsers: true },
+            include: { user: true },
         });
         if (!account) throw new NotFoundException('Account with this key not found');
         if (!account.isBanned && account.expiresAt && new Date() > account.expiresAt) {
             account = await this.prisma.account.update({
                 where: { id: account.id },
                 data: { isBanned: true },
-                include: { telegramUsers: true },
+                include: { user: true },
             });
-        } else {
-            return "error";
         }
         return account;
     }
@@ -141,19 +135,18 @@ export class AccountsService {
 
     async giveAccountKey(idOrTelegramId: string | number, phone: string, days?: number) {
 
+        const sanitizedId = sanitizeId(idOrTelegramId);
+
         let user = await this.prisma.telegramUser.findUnique({
-            where: { id: typeof idOrTelegramId === 'number' ? idOrTelegramId : -1 }, // Try internal ID if number
+            where: { telegramId: sanitizedId },
+            include: { accounts: true },
         });
 
-        if (!user) {
-            // Try as telegramId
-            const sanitizedId = sanitizeId(idOrTelegramId);
-            user = await this.prisma.telegramUser.findUnique({
-                where: { telegramId: sanitizedId },
-            });
-        }
-
         if (!user) throw new NotFoundException('User not found');
+
+        if (user.accountLimit !== -1 && user.accounts.length >= user.accountLimit) {
+            throw new ForbiddenException(`Лимит аккаунтов исчерпан (${user.accountLimit})`);
+        }
 
         const account = await this.prisma.account.findUnique({
             where: { phone },
@@ -161,16 +154,18 @@ export class AccountsService {
 
         if (!account) throw new NotFoundException('Account not found');
 
-        const keyToUse = account.key || generateKey(12);
+        if (account.userId) {
+            throw new ForbiddenException('Этот аккаунт уже привязан к другому пользователю');
+        }
+
+        const keyToUse = account.key || this.generateKey(12);
 
         const expiresAt = days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null;
 
         return this.prisma.account.update({
             where: { phone },
             data: {
-                telegramUsers: {
-                    connect: { id: user.id }
-                },
+                userId: user.id,
                 key: keyToUse,
                 expiresAt,
             },
@@ -190,19 +185,23 @@ export class AccountsService {
 
         if (!user) throw new NotFoundException('User not found');
 
-        return this.giveAccountKey(user.id, phone, days);
+        return this.giveAccountKey(user.telegramId, phone, days);
     }
 
     async autoIssueKey(idOrTelegramId: string | number, phone: string, pin: string) {
-        const sanitizedPhone = phone;
         const sanitizedPin = pin.trim();
 
         const sanitizedId = sanitizeId(idOrTelegramId);
         const user = await this.prisma.telegramUser.findUnique({
             where: { telegramId: sanitizedId, },
+            include: { accounts: true },
         });
 
         if (!user) throw new NotFoundException('User not found in Telegram database');
+
+        if (user.accountLimit !== -1 && user.accounts.length >= user.accountLimit) {
+            throw new ForbiddenException(`Лимит аккаунтов исчерпан (${user.accountLimit})`);
+        }
 
         console.log(`Auto-issue attempt: user=${user.id} (tg=${sanitizedId}), phone=${phone}, pin=${sanitizedPin}`);
         console.log(phone);
@@ -213,22 +212,25 @@ export class AccountsService {
         });
         console.log(account);
         if (!account) throw new NotFoundException('No matching available account found for these details');
+
+        if (account.userId) {
+            throw new ForbiddenException('Этот аккаунт уже привязан к другому пользователю');
+        }
+
         if (account.pin_code != sanitizedPin) throw new ForbiddenException('No matching available account found for these details');
 
         return this.prisma.account.update({
             where: { id: account.id },
             data: {
-                telegramUsers: {
-                    connect: { id: user.id }
-                },
-                key: account.key || generateKey(6)
+                userId: user.id,
+                key: account.key || this.generateKey(6)
             }
         });
     }
 
     async refreshAccountKey(phone: string) {
 
-        const newKey = generateKey(6);
+        const newKey = this.generateKey(6);
 
         return this.prisma.account.update({
             where: { phone },
@@ -239,16 +241,14 @@ export class AccountsService {
     async refreshKeysForUser(telegramUserId: number) {
         const accounts = await this.prisma.account.findMany({
             where: {
-                telegramUsers: {
-                    some: { id: telegramUserId }
-                }
+                userId: telegramUserId
             },
         });
 
         for (const account of accounts) {
             await this.prisma.account.update({
                 where: { id: account.id },
-                data: { key: generateKey(6) },
+                data: { key: this.generateKey(6) },
             });
         }
     }
@@ -258,10 +258,8 @@ export class AccountsService {
         return this.prisma.account.update({
             where: { id: accountId },
             data: {
-                telegramUsers: {
-                    set: [] // Disconnect all users
-                },
-                key: generateKey(6),
+                userId: null,
+                key: this.generateKey(6),
             },
         });
     }
@@ -289,9 +287,7 @@ export class AccountsService {
         return this.prisma.account.update({
             where: { phone },
             data: {
-                telegramUsers: {
-                    disconnect: [{ id: user.id }]
-                }
+                userId: null
             }
         });
     }

@@ -22,7 +22,7 @@ export class AccountsController {
     @UserAccess()
     @Get('user/:identifier')
     async findByUser(@Param('identifier') identifier: string) {
-        let response = this.accountsService.findByUsername(identifier);
+        let response = this.accountsService.findByTelegramId(identifier);
         return response;
     }
 

@@ -13,7 +13,8 @@ model Account {
   id             Int            @id @default(autoincrement())
   phone          String         @unique
   key            String?        @unique
-  telegramUsers  TelegramUser[] @relation("UserAccounts")
+  user           TelegramUser? @relation(fields: [userId], references: [id])
+  userId         Int?
   brand          String?
   manufacturer   String?
   model          String?
@@ -40,6 +41,7 @@ model TelegramUser {
   username      String?
   isBanned      Boolean   @default(false)
   isWhitelisted Boolean   @default(false)
+  accountLimit  Int       @default(-1)
   createdAt     DateTime  @default(now())
-  accounts      Account[] @relation("UserAccounts")
+  accounts      Account[]
 }
