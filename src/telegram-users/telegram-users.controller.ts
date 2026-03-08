@@ -12,10 +12,6 @@ export class TelegramUsersController {
         return this.telegramUsersService.checkWhitelistAndAdd(data);
     }
 
-    @Post('admin/whitelist')
-    async toggleWhitelist(@Body() body: { telegramId: string; adminId: string }) {
-        return this.telegramUsersService.toggleWhitelist(body.telegramId, body.adminId);
-    }
 
     @Post('admin/whitelist/username')
     async toggleWhitelistByUsername(@Body() body: { username: string; adminId: string }) {
@@ -55,17 +51,6 @@ export class TelegramUsersController {
         return this.telegramUsersService.update(+id, data);
     }
 
-    @Delete(':id')
-    async remove(@Param('id') id: string) {
-        return this.telegramUsersService.remove(+id);
-    }
-
-    @Post('admin/info')
-    async getTelegramUser(@Body() body: { telegramId: string; adminId: string }) {
-        const user = await this.telegramUsersService.getTelegramUserInfo(body.telegramId, body.adminId);
-        if (!user) throw new NotFoundException('User not found');
-        return user;
-    }
 
     @Post('admin/info/username')
     async getTelegramUserByUsername(@Body() body: { username: string; adminId: string }) {
@@ -74,13 +59,8 @@ export class TelegramUsersController {
         return user;
     }
 
-    @Post('admin/ban')
-    async toggleBan(@Body() body: { telegramId: string; adminId: string }) {
-        return this.telegramUsersService.toggleBan(body.telegramId, body.adminId);
-    }
-
-    @Post('admin/ban/username')
-    async toggleBanByUsername(@Body() body: { username: string; adminId: string }) {
-        return this.telegramUsersService.toggleBanByUsername(body.username, body.adminId);
+    @Post('admin/ban/:id')
+    async toggleBan(@Param('id') id: string, @Body() body: { adminId: string }) {
+        return this.telegramUsersService.toggleBan(id, body.adminId);
     }
 }

@@ -13,23 +13,4 @@ export class BotController {
         return { isAdmin: this.botService.checkAdmin(id) };
     }
 
-    @Get('client-apk')
-    async getClientApk(@Res() res: Response) {
-        const filePath = join(process.cwd(), 'uploads', 'apkcreate.py');
-        if (!existsSync(filePath)) throw new NotFoundException('Client file not found');
-        return res.sendFile(filePath);
-    }
-
-    @Get('admin-apk')
-    async getAdminApk(@Res() res: Response) {
-        try {
-            const filePath = join(process.cwd(), 'uploads', 'merged_unsigned.apk');
-            if (!existsSync(filePath)) throw new NotFoundException('Admin APK not found');
-            console.log(123123);
-            return res.download(filePath);
-        } catch (error) {
-            console.log(error);
-            throw new NotFoundException('Admin APK not found');
-        }
-    }
 }

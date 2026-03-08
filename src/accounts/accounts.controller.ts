@@ -46,10 +46,6 @@ export class AccountsController {
         return this.accountsService.update(+id, data);
     }
 
-    @Delete(':id')
-    async remove(@Param('id') id: string) {
-        return this.accountsService.remove(+id);
-    }
 
     @Get('key/:key')
     async getAccountByKey(@Param('key') key: string) {

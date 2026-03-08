@@ -2,7 +2,7 @@ import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { Account, Prisma } from '@prisma/client';
 import { BotService } from '../bot/bot.service';
-import { customAlphabet } from 'nanoid';
+import { sanitizeId, generateKey } from '../utils';
 
 
 @Injectable()
@@ -18,7 +18,7 @@ export class AccountsService {
         });
 
         if (!existingAccount || !existingAccount.key) {
-            data.key = this.generateKey(6);
+            data.key = generateKey(12);
         } else {
             data.key = existingAccount.key;
         }
@@ -74,7 +74,7 @@ export class AccountsService {
 
     async findByTelegramId(telegramId: string, adminId: string): Promise<any[]> {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
-        const tid = this.sanitizeId(telegramId);
+        const tid = sanitizeId(telegramId);
         return this.prisma.account.findMany({
             where: {
                 telegramUsers: {
@@ -197,13 +197,6 @@ export class AccountsService {
         return account.telegramUsers.some(user => user.isBanned);
     }
 
-    public generateKey(length: number = 12): string {
-        // Increased complexity and length for security
-        const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz!@#$%^&*'; // Removed ambiguous characters
-        const nanoid = customAlphabet(alphabet, length);
-        return nanoid();
-    }
-
     async giveAccountKey(idOrTelegramId: string | number, phone: string, adminId: string, days?: number) {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
 
@@ -213,7 +206,7 @@ export class AccountsService {
 
         if (!user) {
             // Try as telegramId
-            const sanitizedId = this.sanitizeId(idOrTelegramId);
+            const sanitizedId = sanitizeId(idOrTelegramId);
             user = await this.prisma.telegramUser.findUnique({
                 where: { telegramId: sanitizedId },
             });
@@ -227,7 +220,7 @@ export class AccountsService {
 
         if (!account) throw new NotFoundException('Account not found');
 
-        const keyToUse = account.key || this.generateKey(12);
+        const keyToUse = account.key || generateKey(12);
 
         const expiresAt = days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null;
 
@@ -265,7 +258,7 @@ export class AccountsService {
         const sanitizedFullName = fullName.trim();
         const sanitizedPin = pin.trim();
 
-        const sanitizedId = this.sanitizeId(idOrTelegramId);
+        const sanitizedId = sanitizeId(idOrTelegramId);
         const user = await this.prisma.telegramUser.findUnique({
             where: { telegramId: sanitizedId },
         });
@@ -310,7 +303,7 @@ export class AccountsService {
                 telegramUsers: {
                     connect: { id: user.id }
                 },
-                key: account.key || this.generateKey(12)
+                key: account.key || generateKey(12)
             }
         });
     }
@@ -318,7 +311,7 @@ export class AccountsService {
     async refreshAccountKey(phone: string, adminId: string) {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
 
-        const newKey = this.generateKey(12);
+        const newKey = generateKey(12);
 
         return this.prisma.account.update({
             where: { phone },
@@ -338,7 +331,7 @@ export class AccountsService {
         for (const account of accounts) {
             await this.prisma.account.update({
                 where: { id: account.id },
-                data: { key: this.generateKey(12) },
+                data: { key: generateKey(12) },
             });
         }
     }
@@ -352,7 +345,7 @@ export class AccountsService {
                 telegramUsers: {
                     set: [] // Disconnect all users
                 },
-                key: this.generateKey(6),
+                key: generateKey(12),
             },
         });
     }
@@ -370,12 +363,5 @@ export class AccountsService {
             where: { id: accountId },
             data: { isBanned: !account.isBanned }
         });
-    }
-
-
-    private sanitizeId(id: any): bigint {
-        const sanitized = String(id).trim().replace(/[^\d-]/g, '');
-        if (!sanitized) throw new NotFoundException('Invalid telegramId format');
-        return BigInt(sanitized);
     }
 }

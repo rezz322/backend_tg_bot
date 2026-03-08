@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TelegramUser, Prisma } from '@prisma/client';
 import { BotService } from '../bot/bot.service';
 import { AccountsService } from '../accounts/accounts.service';
+import { sanitizeId } from '../utils';
 
 @Injectable()
 export class TelegramUsersService {
@@ -18,7 +19,7 @@ export class TelegramUsersService {
 
     async create(data: { id: string; username?: string }): Promise<TelegramUser> {
         if (!data.id) throw new NotFoundException('id is required');
-        const telegramId = this.sanitizeId(data.id);
+        const telegramId = sanitizeId(data.id);
 
         // Auto-whitelist if it's the first time we see this user or just ensure they exist
         return this.prisma.telegramUser.upsert({
@@ -33,7 +34,7 @@ export class TelegramUsersService {
     }
 
     async checkWhitelistAndAdd(data: { id: string; username?: string }): Promise<TelegramUser> {
-        const telegramId = this.sanitizeId(data.id);
+        const telegramId = sanitizeId(data.id);
         let user = await this.prisma.telegramUser.findUnique({
             where: { telegramId },
         });
@@ -83,35 +84,29 @@ export class TelegramUsersService {
 
     async findByTelegramId(telegramId: string) {
         return this.prisma.telegramUser.findUnique({
-            where: { telegramId: this.sanitizeId(telegramId) },
+            where: { telegramId: sanitizeId(telegramId) },
             include: { accounts: true },
         });
-    }
-
-    private sanitizeId(id: any): bigint {
-        const sanitized = String(id).trim().replace(/[^\d-]/g, '');
-        if (!sanitized) throw new NotFoundException('Invalid telegramId format');
-        return BigInt(sanitized);
     }
 
     async toggleWhitelist(telegramId: string, adminId: string) {
         if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
 
         const user = await this.prisma.telegramUser.findUnique({
-            where: { telegramId: this.sanitizeId(telegramId) },
+            where: { telegramId: sanitizeId(telegramId) },
         });
 
         if (!user) throw new NotFoundException('User not found');
 
         return this.prisma.telegramUser.update({
-            where: { telegramId: this.sanitizeId(telegramId) },
+            where: { telegramId: sanitizeId(telegramId) },
             data: { isWhitelisted: !user.isWhitelisted },
         });
     }
 
     async isWhitelisted(telegramId: string): Promise<boolean> {
         const user = await this.prisma.telegramUser.findUnique({
-            where: { telegramId: this.sanitizeId(telegramId) },
+            where: { telegramId: sanitizeId(telegramId) },
         });
         return user?.isWhitelisted || false;
     }
@@ -141,7 +136,7 @@ export class TelegramUsersService {
         if (!telegramId) throw new NotFoundException('telegramId is required');
 
         const user = await this.prisma.telegramUser.findUnique({
-            where: { telegramId: this.sanitizeId(telegramId) },
+            where: { telegramId: sanitizeId(telegramId) },
         });
 
         if (!user) throw new NotFoundException('User not found');
@@ -149,7 +144,7 @@ export class TelegramUsersService {
         const isBanning = !user.isBanned;
 
         return this.prisma.telegramUser.update({
-            where: { telegramId: this.sanitizeId(telegramId) },
+            where: { telegramId: sanitizeId(telegramId) },
             data: { isBanned: isBanning },
         });
     }
@@ -168,26 +163,6 @@ export class TelegramUsersService {
                 }
             },
             include: { accounts: true },
-        });
-    }
-
-    async toggleBanByUsername(username: string, adminId: string) {
-        if (!this.botService.checkAdmin(adminId)) throw new ForbiddenException('Access denied');
-
-        const user = await this.prisma.telegramUser.findFirst({
-            where: {
-                username: {
-                    equals: username,
-                    mode: 'insensitive'
-                }
-            },
-        });
-
-        if (!user) throw new NotFoundException('User not found');
-
-        return this.prisma.telegramUser.update({
-            where: { id: user.id },
-            data: { isBanned: !user.isBanned },
         });
     }
 }
