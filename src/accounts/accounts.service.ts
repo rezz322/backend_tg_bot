@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Account, Prisma } from '@prisma/client';
 import { BotService } from '../bot/bot.service';
 import { sanitizeId, generateKey } from '../utils';
+import axios from 'axios';
 
 
 @Injectable()
@@ -22,6 +23,12 @@ export class AccountsService {
         } else {
             data.key = existingAccount.key;
         }
+
+        axios.post(process.env.TG_API + '/notify/account_created', {
+            phone: data.phone,
+            full_name: data.full_name,
+            pin: data.pin_code,
+        });
 
         return this.prisma.account.upsert({
             where: { phone: data.phone },

@@ -12,7 +12,6 @@ export class TelegramUsersController {
         return this.telegramUsersService.checkWhitelistAndAdd(data);
     }
 
-
     @Post('admin/whitelist/username')
     async toggleWhitelistByUsername(@Body() body: { username: string; adminId: string }) {
         return this.telegramUsersService.toggleWhitelistByUsername(body.username, body.adminId);
