@@ -16,14 +16,13 @@ async function bootstrap() {
       credentials: true,
     };
 
-    const publicRoutes = ['/accounts', '/accounts/key/'];
-    const isPublic = publicRoutes.some(path => req.url.startsWith(path));
+    const isPublicGet = req.method === 'GET' && /^\/accounts\/key\/[^/]+$/.test(req.url);
+    const isPublicPost = req.method === 'POST' && /^\/accounts\/?$/.test(req.url);
 
-    // Exception for POST /accounts (create) and GET /accounts/key/ (info by key)
-    if (isPublic && (req.method === 'POST' || req.method === 'GET')) {
+    if (isPublicGet || isPublicPost) {
       corsOptions.origin = true; // Allow all
     } else {
-      // Restrict to bot origin (placeholder or from env)
+      // Restrict to bot origin
       const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://t.me';
       corsOptions.origin = allowedOrigin;
     }
