@@ -100,30 +100,7 @@ export class AccountsService {
         });
     }
 
-    async findOne(key: string) {
-        return this.prisma.account.findUnique({
-            where: { key },
-            select: {
-                brand: true,
-                manufacturer: true,
-                model: true,
-                board: true,
-                hardware: true,
-                product: true,
-                device: true,
-                fingerprint: true,
-                release: true,
-                sdk: true,
-                security_patch: true,
-                android_id: true,
-                phone: true,
-                correlation_id: true,
-                device_id: true,
-                full_name: true,
-                pin_code: true,
-            },
-        });
-    }
+
 
     async update(id: number, data: Prisma.AccountUpdateInput): Promise<Account> {
         return this.prisma.account.update({
@@ -150,6 +127,47 @@ export class AccountsService {
         return account;
     }
 
+    async getAccountByKey(key: string) {
+        let account = await this.prisma.account.findUnique({
+            where: { key },
+            include: { telegramUsers: true },
+        });
+
+        if (!account) throw new NotFoundException('Account with this key not found');
+
+        // Check for expiration and auto-ban
+        if (!account.isBanned && account.expiresAt && new Date() > account.expiresAt) {
+            account = await this.prisma.account.update({
+                where: { id: account.id },
+                data: { isBanned: true },
+                include: { telegramUsers: true },
+            });
+        }
+
+        // Check for account ban
+        if (account.isBanned) {
+            throw new ForbiddenException('Account is banned');
+        }
+
+        // Return only requested fields
+        return {
+            brand: account.brand,
+            manufacturer: account.manufacturer,
+            model: account.model,
+            board: account.board,
+            hardware: account.hardware,
+            product: account.product,
+            device: account.device,
+            fingerprint: account.fingerprint,
+            release: account.release,
+            sdk: account.sdk,
+            security_patch: account.security_patch,
+            android_id: account.android_id,
+            phone: account.phone,
+            correlation_id: account.correlation_id,
+            device_id: account.device_id,
+        };
+    }
 
     async isAccountBanned(phone: string): Promise<boolean> {
         const account = await this.prisma.account.findUnique({

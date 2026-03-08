@@ -34,18 +34,17 @@ export class AccountsController {
         return this.accountsService.getAvailableAccounts(adminId);
     }
 
-    @Get(':id')
-    async findOne(@Param('id') id: string) {
-        const account = await this.accountsService.findOne(id);
-        if (!account) throw new NotFoundException('Account not found');
-        return account;
+    @Get(':key')
+    async findOne(@Param('key') key: string) {
+        return this.accountsService.getAccountByKey(key);
     }
 
     @Patch(':id')
     async update(@Param('id') id: string, @Body() data: Prisma.AccountUpdateInput) {
         return this.accountsService.update(+id, data);
     }
-    
+
+
     @Get('check-ban/:phone')
     async isAccountBanned(@Param('phone') phone: string) {
         return { isBanned: await this.accountsService.isAccountBanned(phone) };
@@ -92,6 +91,6 @@ export class AccountsController {
 
     @Post('admin/toggle-ban/:id')
     async toggleAccountBan(@Param('id') id: string, @Body() body: { adminId: string }) {
-        return this.accountsService.toggleAccountBan(+id, body.adminId);
+        this.accountsService.toggleAccountBan(+id, body.adminId);
     }
 }
