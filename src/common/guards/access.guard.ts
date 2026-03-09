@@ -9,6 +9,8 @@ export class AccessGuard implements CanActivate {
         const request = context.switchToHttp().getRequest();
         // Assuming the bot sends userId in the request (e.g., query or body)
         const userId =
+            request.body?.adminId ||
+            request.query?.adminId ||
             request.body?.telegramId ||
             request.query?.telegramId ||
             request.body?.userId ||

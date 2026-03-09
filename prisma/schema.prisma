@@ -10,12 +10,13 @@ datasource db {
 }
 
 model Account {
-  id             Int            @id @default(autoincrement())
+  id             String         @id @default(uuid())
   phone          String         @unique
   key            String?        @unique
   user           TelegramUser? @relation(fields: [userId], references: [id])
-  userId         Int?
+  userId         String?
   brand          String?
+  // ... existing fields ...
   manufacturer   String?
   model          String?
   board          String?
@@ -31,12 +32,12 @@ model Account {
   device_id      String?
   full_name      String?
   pin_code       String?
-  expiresAt      DateTime? // When this specific account key expires
+  expiresAt      DateTime? 
   isBanned       Boolean        @default(false)
 }
 
 model TelegramUser {
-  id            Int       @id @default(autoincrement())
+  id            String    @id @default(uuid())
   telegramId    String    @unique
   username      String?
   isBanned      Boolean   @default(false)

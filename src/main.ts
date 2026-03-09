@@ -20,9 +20,8 @@ async function bootstrap() {
     const isPublicPost = req.method === 'POST' && (req.url === '/accounts' || req.url === '/accounts/');
 
     if (isPublicGet || isPublicPost) {
-      corsOptions.origin = true; // Allow all
+      corsOptions.origin = true;
     } else {
-      // Restrict to bot origin
       const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://t.me';
       corsOptions.origin = allowedOrigin;
     }

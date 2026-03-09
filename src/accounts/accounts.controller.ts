@@ -30,7 +30,7 @@ export class AccountsController {
     @UserAccess()
     @Patch(':id')
     async update(@Param('id') id: string, @Body() data: Prisma.AccountUpdateInput) {
-        return this.accountsService.update(+id, data);
+        return this.accountsService.update(id, data);
     }
 
 
@@ -54,7 +54,7 @@ export class AccountsController {
 
     @Admin()
     @Post('admin/give-key')
-    async giveKey(@Body() body: { userId?: number; telegramId?: string; phone: string; days?: number }) {
+    async giveKey(@Body() body: { userId?: string; telegramId?: string; phone: string; days?: number }) {
         const id = body.telegramId || body.userId;
         if (!id) throw new NotFoundException('User identification (userId or telegramId) is required');
         return this.accountsService.giveAccountKey(id, body.phone, body.days);
@@ -77,13 +77,13 @@ export class AccountsController {
     @Admin()
     @Post('admin/take-away/:id')
     async takeAwayAccount(@Param('id') id: string) {
-        return this.accountsService.takeAwayAccount(+id);
+        return this.accountsService.takeAwayAccount(id);
     }
 
     @Admin()
     @Post('admin/toggle-ban/:id')
     async toggleAccountBan(@Param('id') id: string) {
-        return this.accountsService.toggleAccountBan(+id);
+        return this.accountsService.toggleAccountBan(id);
     }
 
     @Admin()

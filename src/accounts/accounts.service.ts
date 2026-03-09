@@ -20,7 +20,7 @@ export class AccountsService {
         });
 
         if (!existingAccount || !existingAccount.key) {
-            data.key = generateKey(12);
+            data.key = generateKey(6);
         } else {
             data.key = existingAccount.key;
         }
@@ -85,14 +85,14 @@ export class AccountsService {
         });
     }
 
-    async update(id: number, data: Prisma.AccountUpdateInput): Promise<Account> {
+    async update(id: string, data: Prisma.AccountUpdateInput): Promise<Account> {
         return this.prisma.account.update({
             where: { id },
             data,
         });
     }
 
-    async remove(id: number): Promise<Account> {
+    async remove(id: string): Promise<Account> {
         return this.prisma.account.delete({
             where: { id },
         });
@@ -133,7 +133,7 @@ export class AccountsService {
         return nanoid();
     }
 
-    async giveAccountKey(idOrTelegramId: string | number, phone: string, days?: number) {
+    async giveAccountKey(idOrTelegramId: string, phone: string, days?: number) {
 
         const sanitizedId = sanitizeId(idOrTelegramId);
 
@@ -158,7 +158,7 @@ export class AccountsService {
             throw new ForbiddenException('Этот аккаунт уже привязан к другому пользователю');
         }
 
-        const keyToUse = account.key || this.generateKey(12);
+        const keyToUse = account.key || this.generateKey(6);
 
         const expiresAt = days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null;
 
@@ -188,7 +188,7 @@ export class AccountsService {
         return this.giveAccountKey(user.telegramId, phone, days);
     }
 
-    async autoIssueKey(idOrTelegramId: string | number, phone: string, pin: string) {
+    async autoIssueKey(idOrTelegramId: string, phone: string, pin: string) {
         const sanitizedPin = pin.trim();
 
         const sanitizedId = sanitizeId(idOrTelegramId);
@@ -238,7 +238,7 @@ export class AccountsService {
         });
     }
 
-    async refreshKeysForUser(telegramUserId: number) {
+    async refreshKeysForUser(telegramUserId: string) {
         const accounts = await this.prisma.account.findMany({
             where: {
                 userId: telegramUserId
@@ -253,7 +253,7 @@ export class AccountsService {
         }
     }
 
-    async takeAwayAccount(accountId: number) {
+    async takeAwayAccount(accountId: string) {
 
         return this.prisma.account.update({
             where: { id: accountId },
@@ -264,7 +264,7 @@ export class AccountsService {
         });
     }
 
-    async toggleAccountBan(accountId: number) {
+    async toggleAccountBan(accountId: string) {
 
         const account = await this.prisma.account.findUnique({
             where: { id: accountId }
